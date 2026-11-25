@@ -42,6 +42,9 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  if (config.data instanceof FormData) {
+    delete config.headers['Content-Type'];
+  }
   return config;
 });
 
@@ -63,7 +66,10 @@ api.interceptors.response.use(
       error.response?.data?.message ||
       error.message ||
       'Unable to reach KisanVision AI server';
-    return Promise.reject(new Error(message));
+    const enrichedError = new Error(message);
+    enrichedError.status = error.response?.status;
+    enrichedError.data = error.response?.data;
+    return Promise.reject(enrichedError);
   }
 );
 

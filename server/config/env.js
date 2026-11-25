@@ -1,6 +1,11 @@
 import dotenv from 'dotenv';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 /**
  * Centralized server environment configuration.
@@ -14,6 +19,8 @@ const env = {
   jwtSecret: process.env.JWT_SECRET || '',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
   geminiApiKey: process.env.GEMINI_API_KEY || '',
+  geminiModel: process.env.GEMINI_MODEL || 'gemini-3.5-flash',
+  geminiTimeoutMs: Number(process.env.GEMINI_TIMEOUT_MS) || 30000,
   cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
   cloudinaryApiKey: process.env.CLOUDINARY_API_KEY || '',
   cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET || '',
