@@ -75,3 +75,22 @@ export const historyRateLimiter = rateLimit({
     });
   },
 });
+
+/**
+ * Rate limiter for authenticated analytics and dashboard endpoints.
+ */
+export const analyticsRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (_req, res) => {
+    return res.status(429).json({
+      success: false,
+      message: 'Too many analytics requests. Please wait briefly and try again.',
+      error: {
+        code: 'ANALYTICS_RATE_LIMIT_EXCEEDED',
+      },
+    });
+  },
+});

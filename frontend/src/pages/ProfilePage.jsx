@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   FiActivity,
   FiAlertCircle,
   FiAlertTriangle,
+  FiArrowRight,
   FiCalendar,
   FiCheckCircle,
   FiChevronRight,
@@ -11,22 +13,38 @@ import {
   FiEye,
   FiEyeOff,
   FiGlobe,
+  FiLoader,
   FiLock,
   FiMail,
   FiMapPin,
   FiPhone,
   FiPieChart,
+  FiRefreshCw,
   FiSave,
   FiSearch,
   FiUser,
 } from 'react-icons/fi';
-import Card from '../components/common/Card';
-import StatCard from '../components/common/StatCard';
-import EmptyState from '../components/common/EmptyState';
-import Button from '../components/common/Button';
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 import Badge from '../components/common/Badge';
-import { useToast } from '../context/ToastContext';
+import Button from '../components/common/Button';
+import Card from '../components/common/Card';
+import EmptyState from '../components/common/EmptyState';
+import StatCard from '../components/common/StatCard';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
+import { fetchProfileAnalyticsSummary } from '../services/analyticsService';
+import { ROUTES } from '../utils/constants';
 
 const SETTINGS_SECTIONS = [
   { id: 'profile', label: 'My Profile', icon: FiUser },
@@ -34,6 +52,12 @@ const SETTINGS_SECTIONS = [
   { id: 'password', label: 'Change Password', icon: FiLock },
   { id: 'language', label: 'Language', icon: FiGlobe },
 ];
+
+const HEALTH_COLORS = {
+  Healthy: '#16a34a',
+  Diseased: '#dc2626',
+  Uncertain: '#d97706',
+};
 
 const formatJoinDate = (isoDate) => {
   if (!isoDate) return 'Unavailable';
@@ -46,10 +70,21 @@ const formatJoinDate = (isoDate) => {
   });
 };
 
+const formatDateTime = (isoDate) => {
+  if (!isoDate) return 'Unavailable';
+  const parsed = new Date(isoDate);
+  if (Number.isNaN(parsed.getTime())) return 'Unavailable';
+  return parsed.toLocaleString('en-IN', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
+};
+
 const ProfilePage = () => {
   const { showToast } = useToast();
   const { user, updateProfile, changePassword } = useAuth();
   const [activeSection, setActiveSection] = useState('profile');
+  const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
 
   // Edit profile state
   const [name, setName] = useState(user?.name || '');
@@ -69,28 +104,65 @@ const ProfilePage = () => {
   const [passwordError, setPasswordError] = useState('');
   const [savingPassword, setSavingPassword] = useState(false);
 
+  // Real user analytics & activity state
+  const [analytics, setAnalytics] = useState(null);
+  const [loadingAnalytics, setLoadingAnalytics] = useState(true);
+  const [analyticsError, setAnalyticsError] = useState('');
+
   useEffect(() => {
     if (user) {
       setName(user.name || '');
       setPhone(user.phone || '');
       setLocation(user.location || '');
       setAvatar(user.avatar || '');
+      setAvatarLoadFailed(false);
     }
   }, [user]);
+
+  const loadAnalytics = useCallback(async () => {
+    setLoadingAnalytics(true);
+    setAnalyticsError('');
+    try {
+      const res = await fetchProfileAnalyticsSummary();
+      setAnalytics(res?.data || null);
+    } catch (err) {
+      setAnalyticsError(err.message || 'Unable to load activity analytics.');
+    } finally {
+      setLoadingAnalytics(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadAnalytics();
+  }, [loadAnalytics]);
 
   const handleProfileSave = async (e) => {
     e.preventDefault();
     setProfileError('');
 
     const trimmedName = name.trim();
+    const trimmedPhone = phone.trim();
+    const trimmedLocation = location.trim();
+    const trimmedAvatar = avatar.trim();
+
     if (trimmedName.length < 2) {
       setProfileError('Name must be at least 2 characters.');
       return;
     }
 
-    if (avatar.trim()) {
+    if (trimmedPhone && !/^[+\d\s()-]{6,20}$/.test(trimmedPhone)) {
+      setProfileError('Please enter a valid phone number (6–20 characters) or leave it blank.');
+      return;
+    }
+
+    if (trimmedLocation.length > 120) {
+      setProfileError('Location cannot exceed 120 characters.');
+      return;
+    }
+
+    if (trimmedAvatar) {
       try {
-        const parsed = new URL(avatar.trim());
+        const parsed = new URL(trimmedAvatar);
         if (!['http:', 'https:'].includes(parsed.protocol)) {
           setProfileError('Avatar URL must use http or https.');
           return;
@@ -105,10 +177,11 @@ const ProfilePage = () => {
     try {
       await updateProfile({
         name: trimmedName,
-        phone: phone.trim(),
-        location: location.trim(),
-        avatar: avatar.trim(),
+        phone: trimmedPhone,
+        location: trimmedLocation,
+        avatar: trimmedAvatar,
       });
+      setAvatarLoadFailed(false);
       showToast('Profile updated successfully.', 'success');
     } catch (err) {
       setProfileError(err.message || 'Failed to update profile.');
@@ -158,6 +231,25 @@ const ProfilePage = () => {
     }
   };
 
+  const overview = analytics?.overview || {
+    totalAnalyses: 0,
+    diseaseDetections: 0,
+    plantIdentifications: 0,
+    multiImageBatches: 0,
+    totalImagesProcessed: 0,
+    healthyDetections: 0,
+    diseasedDetections: 0,
+    uncertainResults: 0,
+    rejectedImages: 0,
+  };
+
+  const healthChartData = (analytics?.diseaseAnalytics?.healthDistribution || []).filter(
+    (entry) => entry.count > 0
+  );
+  const cropAnalytics = analytics?.cropAnalytics || [];
+  const hasCropData = cropAnalytics.some((entry) => entry.totalCount > 0);
+  const recentActivity = analytics?.recentActivity || [];
+
   return (
     <div className="kv-page-stack">
       <div className="kv-split-layout">
@@ -165,11 +257,12 @@ const ProfilePage = () => {
           <Card>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                {user?.avatar ? (
+                {user?.avatar && !avatarLoadFailed ? (
                   <img
                     src={user.avatar}
                     alt={user.name}
                     className="kv-profile-avatar-img"
+                    onError={() => setAvatarLoadFailed(true)}
                   />
                 ) : (
                   <div className="kv-profile-avatar">
@@ -255,11 +348,48 @@ const ProfilePage = () => {
         </div>
 
         <div className="kv-page-stack">
+          {analyticsError && (
+            <div
+              className="kv-alert kv-alert-danger"
+              style={{ justifyContent: 'space-between', alignItems: 'center' }}
+              role="alert"
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <FiAlertCircle size={17} />
+                <span>{analyticsError}</span>
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={FiRefreshCw}
+                onClick={loadAnalytics}
+                loading={loadingAnalytics}
+              >
+                Retry
+              </Button>
+            </div>
+          )}
+
           <section className="kv-grid-4" aria-label="Activity Overview">
-            <StatCard label="Total Analyses" value={0} icon={FiClock} tone="green" />
-            <StatCard label="Diseased Detections" value={0} icon={FiAlertTriangle} tone="red" />
-            <StatCard label="Healthy Detections" value={0} icon={FiCheckCircle} tone="green" />
-            <StatCard label="Plant Identifications" value={0} icon={FiSearch} tone="blue" />
+            <StatCard label="Total Analyses" value={overview.totalAnalyses} icon={FiClock} tone="green" />
+            <StatCard
+              label="Diseased Results"
+              value={overview.diseasedDetections}
+              icon={FiAlertTriangle}
+              tone="red"
+            />
+            <StatCard
+              label="Healthy Results"
+              value={overview.healthyDetections}
+              icon={FiCheckCircle}
+              tone="green"
+            />
+            <StatCard
+              label="Plant Identifications"
+              value={overview.plantIdentifications}
+              icon={FiSearch}
+              tone="blue"
+            />
           </section>
 
           {activeSection === 'profile' && (
@@ -327,7 +457,7 @@ const ProfilePage = () => {
                       id="profile-location"
                       type="text"
                       className="kv-input"
-                      placeholder="e.g., Kodagu, Karnataka"
+                      placeholder="e.g., Madikeri, Kodagu, Karnataka"
                       value={location}
                       onChange={(e) => setLocation(e.target.value)}
                       disabled={savingProfile}
@@ -476,14 +606,87 @@ const ProfilePage = () => {
           {activeSection === 'activities' && (
             <Card
               title="My Activities"
-              subtitle="Persisted analysis activity will populate as you run crop inspections in Phases 3-7."
+              subtitle="Live MongoDB breakdown of your recent analyses, batches, and images processed."
               icon={FiActivity}
+              action={
+                <Link to={ROUTES.HISTORY}>
+                  <Button variant="secondary" size="sm" icon={FiArrowRight}>
+                    Full History
+                  </Button>
+                </Link>
+              }
             >
-              <EmptyState
-                icon={FiActivity}
-                title="No Activities Recorded Yet"
-                description="Your Disease Detection, Plant Identification, and Multi Image Analysis records from MongoDB will appear here once AI analysis modules are connected."
-              />
+              {loadingAnalytics ? (
+                <div className="kv-weather-loading">
+                  <FiLoader size={20} className="kv-spin" color="var(--kv-primary)" />
+                  <span>Loading activity summary...</span>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    <Badge variant="info">
+                      Disease Detections: {overview.diseaseDetections}
+                    </Badge>
+                    <Badge variant="success">
+                      Plant IDs: {overview.plantIdentifications}
+                    </Badge>
+                    <Badge variant="neutral">
+                      Multi-Image Batches: {overview.multiImageBatches}
+                    </Badge>
+                    <Badge variant="neutral">
+                      Images Submitted: {overview.totalImagesProcessed}
+                    </Badge>
+                    {overview.rejectedImages > 0 && (
+                      <Badge variant="warning">
+                        Rejected Images: {overview.rejectedImages}
+                      </Badge>
+                    )}
+                  </div>
+
+                  {recentActivity.length === 0 ? (
+                    <EmptyState
+                      icon={FiActivity}
+                      title="No Activities Recorded Yet"
+                      description="Run a Disease Detection, Plant Identification, or Multi Image Analysis to view your real activity here."
+                    />
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {recentActivity.map((item) => (
+                        <Link
+                          key={`${item.analysisType}-${item.id}`}
+                          to={`${ROUTES.HISTORY}?type=${item.analysisType}&id=${item.id}`}
+                          className="kv-home-recent-row"
+                        >
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: 14 }}>
+                              {item.crop} — {item.title}
+                            </div>
+                            <div style={{ fontSize: 12, color: 'var(--kv-text-muted)' }}>
+                              {formatDateTime(item.createdAt)}
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <Badge
+                              variant={
+                                item.status === 'DISEASED'
+                                  ? 'danger'
+                                  : item.status === 'HEALTHY' ||
+                                      item.status === 'IDENTIFIED' ||
+                                      item.status === 'COMPLETED'
+                                    ? 'success'
+                                    : 'warning'
+                              }
+                            >
+                              {item.status}
+                            </Badge>
+                            <FiArrowRight size={14} color="var(--kv-text-muted)" />
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </Card>
           )}
 
@@ -513,26 +716,77 @@ const ProfilePage = () => {
           <div className="kv-grid-2">
             <Card
               title="Detection Results (Healthy vs Diseased)"
-              subtitle="Calculated strictly from your persisted database records."
+              subtitle="Evaluated images across single & batch disease runs (excludes rejected images)."
               icon={FiPieChart}
             >
-              <EmptyState
-                icon={FiPieChart}
-                title="No Detection Analytics Yet"
-                description="Once analyses are saved in MongoDB, Recharts visualizations will display your real healthy vs diseased counts."
-              />
+              {loadingAnalytics ? (
+                <div className="kv-weather-loading">
+                  <FiLoader size={20} className="kv-spin" color="var(--kv-primary)" />
+                  <span>Loading detection analytics...</span>
+                </div>
+              ) : healthChartData.length === 0 ? (
+                <EmptyState
+                  icon={FiPieChart}
+                  title="No Detection Analytics Yet"
+                  description="Save at least one Disease Detection or Multi Image Analysis to view your genuine healthy vs diseased breakdown."
+                />
+              ) : (
+                <div style={{ height: 220 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={healthChartData}
+                        dataKey="count"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={48}
+                        outerRadius={78}
+                        paddingAngle={3}
+                      >
+                        {healthChartData.map((entry) => (
+                          <Cell
+                            key={entry.name}
+                            fill={HEALTH_COLORS[entry.name] || '#64748b'}
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
             </Card>
 
             <Card
               title="Most Analyzed Crops"
-              subtitle="Distribution across the 5 supported crops."
+              subtitle="Genuine analysis counts across the 5 supported crops."
               icon={FiActivity}
             >
-              <EmptyState
-                icon={FiActivity}
-                title="No Crop Statistics Yet"
-                description="Counts for Coffee, Black Pepper, Ginger, Cardamom, and Arecanut will populate automatically from database history."
-              />
+              {loadingAnalytics ? (
+                <div className="kv-weather-loading">
+                  <FiLoader size={20} className="kv-spin" color="var(--kv-primary)" />
+                  <span>Loading crop statistics...</span>
+                </div>
+              ) : !hasCropData ? (
+                <EmptyState
+                  icon={FiActivity}
+                  title="No Crop Statistics Yet"
+                  description="Counts for Coffee, Black Pepper, Ginger, Cardamom, and Arecanut will populate from your saved MongoDB analyses."
+                />
+              ) : (
+                <div style={{ height: 220 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={cropAnalytics}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e1e8e3" />
+                      <XAxis dataKey="crop" tick={{ fontSize: 11 }} />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                      <Tooltip />
+                      <Bar dataKey="totalCount" name="Analyses" fill="#15803d" radius={[6, 6, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
             </Card>
           </div>
         </div>

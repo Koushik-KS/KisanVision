@@ -3,6 +3,7 @@ import { SUPPORTED_CROPS } from '../config/constants.js';
 import DiseaseAnalysis from '../models/DiseaseAnalysis.js';
 import MultiImageAnalysis from '../models/MultiImageAnalysis.js';
 import PlantIdentification from '../models/PlantIdentification.js';
+import { getUserAnalyticsBundle } from '../services/analytics/analyticsService.js';
 import { deleteCloudinaryAssets } from '../services/cloudinary/cloudinaryService.js';
 import AppError from '../utils/AppError.js';
 import { sendSuccess } from '../utils/apiResponse.js';
@@ -142,28 +143,8 @@ const formatMultiSummaryItem = (doc) => {
 };
 
 const fetchUserStats = async (userId) => {
-  const [
-    totalDisease,
-    diseasedDetections,
-    healthyDetections,
-    plantIdentifications,
-    multiImageBatches,
-  ] = await Promise.all([
-    DiseaseAnalysis.countDocuments({ user: userId }),
-    DiseaseAnalysis.countDocuments({ user: userId, status: 'DISEASED' }),
-    DiseaseAnalysis.countDocuments({ user: userId, status: 'HEALTHY' }),
-    PlantIdentification.countDocuments({ user: userId }),
-    MultiImageAnalysis.countDocuments({ user: userId }),
-  ]);
-
-  return {
-    totalAnalyses: totalDisease + plantIdentifications + multiImageBatches,
-    diseaseDetections: totalDisease,
-    diseasedDetections,
-    healthyDetections,
-    plantIdentifications,
-    multiImageBatches,
-  };
+  const analytics = await getUserAnalyticsBundle(userId, { days: 30, recentLimit: 1 });
+  return analytics.overview;
 };
 
 const findOwnedRecordAcrossCollections = async (userId, id, explicitType = null) => {

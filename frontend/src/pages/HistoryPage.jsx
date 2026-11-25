@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   FiActivity,
   FiAlertCircle,
@@ -214,6 +215,9 @@ const getBatchItemBadge = (item) => {
 
 const HistoryPage = () => {
   const { showToast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const deepLinkType = searchParams.get('type') || '';
+  const deepLinkId = searchParams.get('id') || '';
 
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -290,7 +294,7 @@ const HistoryPage = () => {
     loadHistory();
   }, [loadHistory]);
 
-  const handleOpenDetail = async (item) => {
+  const handleOpenDetail = useCallback(async (item) => {
     setLoadingDetail(true);
     setDetailError('');
     setDiseaseTab('info');
@@ -311,7 +315,16 @@ const HistoryPage = () => {
     } finally {
       setLoadingDetail(false);
     }
-  };
+  }, [showToast]);
+
+  useEffect(() => {
+    if (deepLinkId) {
+      handleOpenDetail({
+        id: deepLinkId,
+        analysisType: deepLinkType || undefined,
+      });
+    }
+  }, [deepLinkId, deepLinkType, handleOpenDetail]);
 
   const handleConfirmDelete = async () => {
     if (!deleteTarget || deleting) return;
@@ -324,6 +337,9 @@ const HistoryPage = () => {
       if (selectedRecord?.id === deleteTarget.id) {
         setSelectedRecord(null);
         setDetailError('');
+        if (deepLinkId) {
+          setSearchParams({}, { replace: true });
+        }
       }
 
       showToast(
@@ -404,6 +420,9 @@ const HistoryPage = () => {
               onClick={() => {
                 setSelectedRecord(null);
                 setDetailError('');
+                if (deepLinkId) {
+                  setSearchParams({}, { replace: true });
+                }
               }}
             >
               Back to History
