@@ -21,6 +21,8 @@ export const MAX_BATCH_IMAGES = 5;
 
 export const ROUTES = {
   HOME: '/',
+  LOGIN: '/login',
+  REGISTER: '/register',
   DISEASE_DETECTION: '/disease-detection',
   PLANT_IDENTIFICATION: '/plant-identification',
   MULTI_IMAGE_ANALYSIS: '/multi-image-analysis',
@@ -28,3 +30,5 @@ export const ROUTES = {
   HISTORY: '/history',
   PROFILE: '/profile',
 };
+
+export const AUTH_TOKEN_STORAGE_KEY = 'kv_auth_token';

@@ -18,6 +18,7 @@ import SupportedCropsBar from '../components/common/SupportedCropsBar';
 import Badge from '../components/common/Badge';
 import Button from '../components/common/Button';
 import { ROUTES } from '../utils/constants';
+import { useAuth } from '../context/AuthContext';
 
 const FEATURE_CARDS = [
   {
@@ -56,6 +57,7 @@ const FEATURE_CARDS = [
 
 const HomePage = () => {
   const { apiHealth } = useOutletContext() || {};
+  const { user } = useAuth();
   const isApiOnline = apiHealth?.status === 'online';
 
   return (
@@ -65,7 +67,9 @@ const HomePage = () => {
           <FiCpu size={14} />
           <span>Agentic AI Agricultural Platform</span>
         </span>
-        <h2 className="kv-hero-title">Welcome to KisanVision AI</h2>
+        <h2 className="kv-hero-title">
+          {user?.name ? `Welcome back, ${user.name}` : 'Welcome to KisanVision AI'}
+        </h2>
         <p className="kv-hero-desc">
           An Agentic AI-powered agricultural intelligence assistant built for Coffee, Black Pepper,
           Ginger, Cardamom, and Arecanut. Validate crop images, detect diseases, identify plants,

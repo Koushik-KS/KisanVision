@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
 import Topbar from '../components/layout/Topbar';
 import ConfirmModal from '../components/common/ConfirmModal';
 import { ROUTES } from '../utils/constants';
 import { checkBackendHealth } from '../services/healthService';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 
 const PAGE_TITLES = {
   [ROUTES.HOME]: 'Home',
@@ -19,7 +20,9 @@ const PAGE_TITLES = {
 
 const DashboardLayout = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { showToast } = useToast();
+  const { logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [logoutModalOpen, setLogoutModalOpen] = useState(false);
   const [apiHealth, setApiHealth] = useState({
@@ -57,12 +60,11 @@ const DashboardLayout = () => {
   const currentTitle = PAGE_TITLES[location.pathname] || 'KisanVision AI';
   const showBack = location.pathname !== ROUTES.HOME;
 
-  const handleConfirmLogout = () => {
+  const handleConfirmLogout = async () => {
     setLogoutModalOpen(false);
-    showToast(
-      'Authentication and user sessions will be enabled in Phase 2.',
-      'info'
-    );
+    await logout();
+    showToast('Logged out successfully.', 'success');
+    navigate(ROUTES.LOGIN, { replace: true });
   };
 
   return (
@@ -88,11 +90,11 @@ const DashboardLayout = () => {
 
       <ConfirmModal
         isOpen={logoutModalOpen}
-        title="Logout"
-        message="User authentication and session termination will be activated in Phase 2. Would you like to continue exploring the Phase 1 workspace?"
-        confirmLabel="OK"
-        cancelLabel="Close"
-        confirmVariant="primary"
+        title="Confirm Logout"
+        message="Are you sure you want to log out of your KisanVision AI session?"
+        confirmLabel="Logout"
+        cancelLabel="Cancel"
+        confirmVariant="danger"
         onConfirm={handleConfirmLogout}
         onCancel={() => setLogoutModalOpen(false)}
       />

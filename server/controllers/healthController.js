@@ -1,4 +1,5 @@
 import { SUPPORTED_CROPS } from '../config/constants.js';
+import { isDatabaseConnected } from '../config/database.js';
 import env from '../config/env.js';
 import { sendSuccess } from '../utils/apiResponse.js';
 
@@ -18,6 +19,7 @@ export const getHealth = (req, res) => {
       supportedCrops: SUPPORTED_CROPS,
       capabilities: {
         databaseConfigured: Boolean(env.mongodbUri),
+        databaseConnected: isDatabaseConnected(),
         aiConfigured: Boolean(env.geminiApiKey),
         storageConfigured: Boolean(
           env.cloudinaryCloudName && env.cloudinaryApiKey && env.cloudinaryApiSecret

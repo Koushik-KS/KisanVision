@@ -286,3 +286,204 @@
     font-size: 22px;
   }
 }
+
+
+/* Authentication Pages & Form Controls */
+.kv-auth-loading {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background-color: var(--kv-bg);
+  color: var(--kv-text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.kv-auth-page {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(320px, 1.05fr) minmax(320px, 1fr);
+  background-color: var(--kv-bg);
+}
+
+.kv-auth-hero {
+  background: linear-gradient(160deg, var(--kv-sidebar-bg) 0%, var(--kv-sidebar-bg-deep) 100%);
+  color: #ffffff;
+  padding: 48px 44px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 32px;
+}
+
+.kv-auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.kv-auth-brand-title {
+  font-family: var(--kv-font-heading);
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.kv-auth-brand-sub {
+  font-size: 12px;
+  color: var(--kv-sidebar-muted);
+}
+
+.kv-auth-hero-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 480px;
+}
+
+.kv-auth-hero-copy h1 {
+  font-size: 32px;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1.2;
+}
+
+.kv-auth-hero-copy p {
+  font-size: 15px;
+  color: #dcfce7;
+  line-height: 1.6;
+}
+
+.kv-auth-highlights {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.kv-auth-highlight-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: #ecfccb;
+}
+
+.kv-auth-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 36px 24px;
+}
+
+.kv-auth-card {
+  width: 100%;
+  max-width: 440px;
+  background-color: var(--kv-surface);
+  border: 1px solid var(--kv-border);
+  border-radius: var(--kv-radius-lg);
+  box-shadow: var(--kv-shadow-md);
+  padding: 32px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.kv-auth-card-header h2 {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.kv-auth-card-header p {
+  font-size: 14px;
+  color: var(--kv-text-muted);
+}
+
+.kv-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.kv-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.kv-form-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--kv-text);
+}
+
+.kv-password-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.kv-input-with-toggle {
+  padding-right: 40px;
+}
+
+.kv-password-toggle {
+  position: absolute;
+  right: 10px;
+  background: transparent;
+  border: none;
+  color: var(--kv-text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+}
+
+.kv-password-toggle:hover {
+  color: var(--kv-text);
+}
+
+.kv-auth-footer {
+  text-align: center;
+  font-size: 13px;
+  color: var(--kv-text-secondary);
+}
+
+.kv-auth-link {
+  color: var(--kv-primary);
+  font-weight: 600;
+}
+
+.kv-auth-link:hover {
+  text-decoration: underline;
+}
+
+.kv-profile-avatar-img {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #bbf7d0;
+}
+
+@media (max-width: 900px) {
+  .kv-auth-page {
+    grid-template-columns: 1fr;
+  }
+
+  .kv-auth-hero {
+    padding: 28px 22px;
+  }
+
+  .kv-auth-hero-copy h1 {
+    font-size: 24px;
+  }
+
+  .kv-auth-panel {
+    padding: 24px 16px;
+  }
+}

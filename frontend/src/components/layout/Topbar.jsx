@@ -8,9 +8,11 @@ import {
   FiAlertTriangle,
 } from 'react-icons/fi';
 import { ROUTES } from '../../utils/constants';
+import { useAuth } from '../../context/AuthContext';
 
 const Topbar = ({ title, showBack, onMenuClick, apiHealth }) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const isOnline = apiHealth?.status === 'online';
   const isChecking = apiHealth?.status === 'checking';
@@ -68,9 +70,17 @@ const Topbar = ({ title, showBack, onMenuClick, apiHealth }) => {
           onClick={() => navigate(ROUTES.PROFILE)}
         >
           <span className="kv-user-avatar-sm">
-            <FiUser size={15} />
+            {user?.avatar ? (
+              <img
+                src={user.avatar}
+                alt={user.name}
+                style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+              />
+            ) : (
+              <FiUser size={15} />
+            )}
           </span>
-          <span>Account</span>
+          <span>{user?.name || 'Profile'}</span>
         </button>
       </div>
     </header>
