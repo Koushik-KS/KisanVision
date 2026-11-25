@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import {
   FiActivity,
@@ -8,17 +9,19 @@ import {
   FiCloudRain,
   FiCpu,
   FiLayers,
+  FiLoader,
   FiSearch,
   FiServer,
 } from 'react-icons/fi';
-import Card from '../components/common/Card';
-import StatCard from '../components/common/StatCard';
-import EmptyState from '../components/common/EmptyState';
-import SupportedCropsBar from '../components/common/SupportedCropsBar';
 import Badge from '../components/common/Badge';
 import Button from '../components/common/Button';
-import { ROUTES } from '../utils/constants';
+import Card from '../components/common/Card';
+import EmptyState from '../components/common/EmptyState';
+import StatCard from '../components/common/StatCard';
+import SupportedCropsBar from '../components/common/SupportedCropsBar';
 import { useAuth } from '../context/AuthContext';
+import { fetchHistory } from '../services/historyService';
+import { ROUTES } from '../utils/constants';
 
 const FEATURE_CARDS = [
   {
@@ -59,6 +62,35 @@ const HomePage = () => {
   const { apiHealth } = useOutletContext() || {};
   const { user } = useAuth();
   const isApiOnline = apiHealth?.status === 'online';
+
+  const [stats, setStats] = useState({
+    totalAnalyses: 0,
+    diseasedDetections: 0,
+    healthyDetections: 0,
+    plantIdentifications: 0,
+  });
+  const [recentRecords, setRecentRecords] = useState([]);
+  const [loadingActivity, setLoadingActivity] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    fetchHistory({ page: 1, limit: 5 })
+      .then((res) => {
+        if (!active) return;
+        const data = res?.data || {};
+        if (data.stats) setStats(data.stats);
+        setRecentRecords(data.records || []);
+      })
+      .catch(() => {
+        // Keep real 0 defaults without crashing dashboard if DB/network temporarily fails
+      })
+      .finally(() => {
+        if (active) setLoadingActivity(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
     <div className="kv-page-stack">
@@ -117,15 +149,30 @@ const HomePage = () => {
       </section>
 
       <section className="kv-grid-4" aria-label="Database Activity Summary">
-        <StatCard label="Total Analyses" value={0} icon={FiClock} tone="green" />
-        <StatCard label="Diseased Detections" value={0} icon={FiAlertTriangle} tone="red" />
-        <StatCard label="Healthy Detections" value={0} icon={FiCheckCircle} tone="green" />
-        <StatCard label="Plant Identifications" value={0} icon={FiSearch} tone="blue" />
+        <StatCard label="Total Analyses" value={stats.totalAnalyses} icon={FiClock} tone="green" />
+        <StatCard
+          label="Diseased Detections"
+          value={stats.diseasedDetections}
+          icon={FiAlertTriangle}
+          tone="red"
+        />
+        <StatCard
+          label="Healthy Detections"
+          value={stats.healthyDetections}
+          icon={FiCheckCircle}
+          tone="green"
+        />
+        <StatCard
+          label="Plant Identifications"
+          value={stats.plantIdentifications}
+          icon={FiSearch}
+          tone="blue"
+        />
       </section>
 
       <Card
         title="Recent Analyses & Activity"
-        subtitle="Real authenticated user records will appear here once database persistence is enabled."
+        subtitle="Latest authenticated user analyses persisted in MongoDB and Cloudinary."
         icon={FiClock}
         action={
           <Link to={ROUTES.HISTORY}>
@@ -135,18 +182,58 @@ const HomePage = () => {
           </Link>
         }
       >
-        <EmptyState
-          icon={FiClock}
-          title="No analyses recorded yet"
-          description="Your saved Disease Detection, Plant Identification, and Multi Image Analysis records from MongoDB will appear here after authentication and AI endpoints are connected."
-          action={
-            <Link to={ROUTES.DISEASE_DETECTION}>
-              <Button variant="primary" size="sm" icon={FiActivity}>
-                Go to Disease Detection
-              </Button>
-            </Link>
-          }
-        />
+        {loadingActivity ? (
+          <div className="kv-weather-loading">
+            <FiLoader size={20} className="kv-spin" color="var(--kv-primary)" />
+            <span>Loading recent activity...</span>
+          </div>
+        ) : recentRecords.length === 0 ? (
+          <EmptyState
+            icon={FiClock}
+            title="No analyses recorded yet"
+            description="Your saved Disease Detection, Plant Identification, and Multi Image Analysis records from MongoDB will appear here."
+            action={
+              <Link to={ROUTES.DISEASE_DETECTION}>
+                <Button variant="primary" size="sm" icon={FiActivity}>
+                  Go to Disease Detection
+                </Button>
+              </Link>
+            }
+          />
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {recentRecords.map((item) => (
+              <Link
+                key={`${item.analysisType}-${item.id}`}
+                to={ROUTES.HISTORY}
+                className="kv-home-recent-row"
+              >
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 14 }}>
+                    {item.crop} — {item.title}
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--kv-text-secondary)' }}>
+                    {item.resultSummary}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Badge
+                    variant={
+                      item.status === 'DISEASED'
+                        ? 'danger'
+                        : item.status === 'HEALTHY' || item.status === 'IDENTIFIED'
+                          ? 'success'
+                          : 'info'
+                    }
+                  >
+                    {item.status}
+                  </Badge>
+                  <FiArrowRight size={14} color="var(--kv-text-muted)" />
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </Card>
     </div>
   );

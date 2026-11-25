@@ -342,7 +342,17 @@ const DiseaseDetectionPage = () => {
                     <Badge variant={diseaseStatusMeta.variant} icon={DiseaseStatusIcon}>
                       {diseaseStatusMeta.label}
                     </Badge>
-                    {savedRecord?.id && <Badge variant="neutral">Saved to History</Badge>}
+                    {savedRecord?.id && (
+                      <Badge
+                        variant={
+                          savedRecord.storageStatus === 'STORED' ? 'neutral' : 'warning'
+                        }
+                      >
+                        {savedRecord.storageStatus === 'STORED'
+                          ? 'Saved to History'
+                          : 'Saved (Image Storage Unavailable)'}
+                      </Badge>
+                    )}
                   </div>
                 )
               }

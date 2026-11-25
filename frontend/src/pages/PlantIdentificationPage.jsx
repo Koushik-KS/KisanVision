@@ -312,7 +312,17 @@ const PlantIdentificationPage = () => {
                     >
                       {plantIdentification.status === 'IDENTIFIED' ? 'Identified' : 'Uncertain'}
                     </Badge>
-                    {savedRecord?.id && <Badge variant="neutral">Saved to History</Badge>}
+                    {savedRecord?.id && (
+                      <Badge
+                        variant={
+                          savedRecord.storageStatus === 'STORED' ? 'neutral' : 'warning'
+                        }
+                      >
+                        {savedRecord.storageStatus === 'STORED'
+                          ? 'Saved to History'
+                          : 'Saved (Image Storage Unavailable)'}
+                      </Badge>
+                    )}
                   </div>
                 )
               }

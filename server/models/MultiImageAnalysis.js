@@ -9,6 +9,12 @@ const batchImageItemSchema = new mongoose.Schema(
     sizeBytes: { type: Number, default: 0 },
     imageUrl: { type: String, default: null },
     imagePublicId: { type: String, default: null },
+    imageStorageStatus: {
+      type: String,
+      enum: ['STORED', 'NOT_CONFIGURED', 'UPLOAD_FAILED', null],
+      default: null,
+    },
+    imageStorageError: { type: String, default: null },
     processingStatus: {
       type: String,
       enum: ['ANALYZED', 'REJECTED', 'NOT_PROCESSED', 'FAILED'],
@@ -101,6 +107,7 @@ const multiImageAnalysisSchema = new mongoose.Schema(
 );
 
 multiImageAnalysisSchema.index({ user: 1, createdAt: -1 });
+multiImageAnalysisSchema.index({ user: 1, processingStatus: 1, createdAt: -1 });
 
 const MultiImageAnalysis = mongoose.model(
   'MultiImageAnalysis',

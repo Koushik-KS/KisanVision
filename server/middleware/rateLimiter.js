@@ -37,3 +37,41 @@ export const aiRateLimiter = rateLimit({
     });
   },
 });
+
+/**
+ * Rate limiter for weather lookup and weather-intelligence endpoints.
+ */
+export const weatherRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (_req, res) => {
+    return res.status(429).json({
+      success: false,
+      message: 'Too many weather requests. Please wait briefly and try again.',
+      error: {
+        code: 'WEATHER_RATE_LIMIT_EXCEEDED',
+      },
+    });
+  },
+});
+
+/**
+ * Rate limiter for authenticated History retrieval and deletion endpoints.
+ */
+export const historyRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (_req, res) => {
+    return res.status(429).json({
+      success: false,
+      message: 'Too many history requests. Please wait briefly and try again.',
+      error: {
+        code: 'HISTORY_RATE_LIMIT_EXCEEDED',
+      },
+    });
+  },
+});

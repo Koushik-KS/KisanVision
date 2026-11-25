@@ -52,6 +52,15 @@ const plantIdentificationSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    imageStorageStatus: {
+      type: String,
+      enum: ['STORED', 'NOT_CONFIGURED', 'UPLOAD_FAILED', null],
+      default: null,
+    },
+    imageStorageError: {
+      type: String,
+      default: null,
+    },
     imageMetadata: {
       mimeType: {
         type: String,
@@ -69,6 +78,8 @@ const plantIdentificationSchema = new mongoose.Schema(
 );
 
 plantIdentificationSchema.index({ user: 1, createdAt: -1 });
+plantIdentificationSchema.index({ user: 1, crop: 1, createdAt: -1 });
+plantIdentificationSchema.index({ user: 1, status: 1, createdAt: -1 });
 
 const PlantIdentification = mongoose.model(
   'PlantIdentification',

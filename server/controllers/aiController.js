@@ -4,7 +4,10 @@ import DiseaseAnalysis from '../models/DiseaseAnalysis.js';
 import MultiImageAnalysis from '../models/MultiImageAnalysis.js';
 import PlantIdentification from '../models/PlantIdentification.js';
 import { AI_TASKS, orchestrateAIWorkflow } from '../services/ai/orchestrator.js';
-import { uploadImageIfConfigured } from '../services/cloudinary/cloudinaryService.js';
+import {
+  deleteCloudinaryAssets,
+  uploadImageIfConfigured,
+} from '../services/cloudinary/cloudinaryService.js';
 import AppError from '../utils/AppError.js';
 import { sendError, sendSuccess } from '../utils/apiResponse.js';
 
@@ -47,8 +50,9 @@ export const validateCrop = async (req, res, next) => {
  * and saves the validated analysis result to MongoDB for the authenticated user.
  */
 export const detectDisease = async (req, res, next) => {
+  let uploadedPublicId = null;
   try {
-    const { buffer, mimeType } = req.validatedImage;
+    const { buffer, mimeType, size } = req.validatedImage;
 
     const result = await orchestrateAIWorkflow(AI_TASKS.DISEASE_DETECTION, {
       imageBuffer: buffer,
@@ -67,11 +71,13 @@ export const detectDisease = async (req, res, next) => {
       });
     }
 
-    const { imageUrl, imagePublicId } = await uploadImageIfConfigured({
+    const storageResult = await uploadImageIfConfigured({
       imageBuffer: buffer,
       mimeType,
       userId: req.user.id,
+      category: 'disease-detection',
     });
+    uploadedPublicId = storageResult.imagePublicId;
 
     const { diseaseAnalysis, validation } = result;
 
@@ -87,8 +93,14 @@ export const detectDisease = async (req, res, next) => {
         validation,
         diseaseAnalysis,
       },
-      imageUrl,
-      imagePublicId,
+      imageUrl: storageResult.imageUrl,
+      imagePublicId: storageResult.imagePublicId,
+      imageStorageStatus: storageResult.storageStatus,
+      imageStorageError: storageResult.storageError,
+      imageMetadata: {
+        mimeType,
+        sizeBytes: size,
+      },
     });
 
     return sendSuccess(res, {
@@ -100,11 +112,17 @@ export const detectDisease = async (req, res, next) => {
         record: {
           id: savedRecord._id.toString(),
           imageUrl: savedRecord.imageUrl,
+          imagePublicId: savedRecord.imagePublicId,
+          storageStatus: savedRecord.imageStorageStatus,
+          storageError: savedRecord.imageStorageError,
           createdAt: savedRecord.createdAt,
         },
       },
     });
   } catch (err) {
+    if (uploadedPublicId) {
+      await deleteCloudinaryAssets([uploadedPublicId]).catch(() => {});
+    }
     return next(err);
   }
 };
@@ -191,6 +209,7 @@ export const getDiseaseAnalysisById = async (req, res, next) => {
  * and saves the validated identification record to MongoDB for the authenticated user.
  */
 export const identifyPlant = async (req, res, next) => {
+  let uploadedPublicId = null;
   try {
     const { buffer, mimeType, size } = req.validatedImage;
 
@@ -211,11 +230,13 @@ export const identifyPlant = async (req, res, next) => {
       });
     }
 
-    const { imageUrl, imagePublicId } = await uploadImageIfConfigured({
+    const storageResult = await uploadImageIfConfigured({
       imageBuffer: buffer,
       mimeType,
       userId: req.user.id,
+      category: 'plant-identification',
     });
+    uploadedPublicId = storageResult.imagePublicId;
 
     const { plantIdentification, validation } = result;
 
@@ -230,8 +251,10 @@ export const identifyPlant = async (req, res, next) => {
         validation,
         plantIdentification,
       },
-      imageUrl,
-      imagePublicId,
+      imageUrl: storageResult.imageUrl,
+      imagePublicId: storageResult.imagePublicId,
+      imageStorageStatus: storageResult.storageStatus,
+      imageStorageError: storageResult.storageError,
       imageMetadata: {
         mimeType,
         sizeBytes: size,
@@ -250,11 +273,17 @@ export const identifyPlant = async (req, res, next) => {
         record: {
           id: savedRecord._id.toString(),
           imageUrl: savedRecord.imageUrl,
+          imagePublicId: savedRecord.imagePublicId,
+          storageStatus: savedRecord.storageStatus,
+          storageError: savedRecord.storageError,
           createdAt: savedRecord.createdAt,
         },
       },
     });
   } catch (err) {
+    if (uploadedPublicId) {
+      await deleteCloudinaryAssets([uploadedPublicId]).catch(() => {});
+    }
     return next(err);
   }
 };
@@ -345,6 +374,7 @@ export const getPlantIdentificationById = async (req, res, next) => {
  * in MongoDB, and stops additional Gemini requests cleanly if quota is exceeded.
  */
 export const analyzeBatch = async (req, res, next) => {
+  const uploadedPublicIds = [];
   try {
     const items = req.validatedBatchImages;
     const batchResult = await orchestrateAIWorkflow(AI_TASKS.MULTI_IMAGE_ANALYSIS, {
@@ -353,20 +383,26 @@ export const analyzeBatch = async (req, res, next) => {
 
     const itemsWithStorage = await Promise.all(
       batchResult.items.map(async (item) => {
-        if (item.processingStatus !== 'ANALYZED') {
-          return item;
-        }
         const source = items.find((src) => src.index === item.index);
         if (!source?.buffer) return item;
-        const { imageUrl, imagePublicId } = await uploadImageIfConfigured({
+
+        const storageResult = await uploadImageIfConfigured({
           imageBuffer: source.buffer,
           mimeType: source.mimeType,
           userId: req.user.id,
+          category: 'multi-image-analysis',
         });
+
+        if (storageResult.imagePublicId) {
+          uploadedPublicIds.push(storageResult.imagePublicId);
+        }
+
         return {
           ...item,
-          imageUrl,
-          imagePublicId,
+          imageUrl: storageResult.imageUrl,
+          imagePublicId: storageResult.imagePublicId,
+          imageStorageStatus: storageResult.storageStatus,
+          imageStorageError: storageResult.storageError,
         };
       })
     );
@@ -422,6 +458,9 @@ export const analyzeBatch = async (req, res, next) => {
       },
     });
   } catch (err) {
+    if (uploadedPublicIds.length > 0) {
+      await deleteCloudinaryAssets(uploadedPublicIds).catch(() => {});
+    }
     return next(err);
   }
 };

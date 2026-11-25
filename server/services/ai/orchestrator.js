@@ -4,12 +4,14 @@ import { runCropValidationAgent } from './agents/cropValidationAgent.js';
 import { runDiseaseDetectionAgent } from './agents/diseaseDetectionAgent.js';
 import { runMultiImageAgent } from './agents/multiImageAgent.js';
 import { runPlantIdentificationAgent } from './agents/plantIdentificationAgent.js';
+import { runWeatherIntelligenceAgent } from './agents/weatherAgent.js';
 
 export const AI_TASKS = {
   CROP_VALIDATION: 'CROP_VALIDATION',
   DISEASE_DETECTION: 'DISEASE_DETECTION',
   PLANT_IDENTIFICATION: 'PLANT_IDENTIFICATION',
   MULTI_IMAGE_ANALYSIS: 'MULTI_IMAGE_ANALYSIS',
+  WEATHER_INTELLIGENCE: 'WEATHER_INTELLIGENCE',
 };
 
 const isValidationAccepted = (validation) =>
@@ -31,6 +33,7 @@ export const orchestrateAIWorkflow = async (taskType, payload, deps = {}) => {
   const validateCrop = deps.validateCropAgent || runCropValidationAgent;
   const detectDisease = deps.detectDiseaseAgent || runDiseaseDetectionAgent;
   const identifyPlant = deps.identifyPlantAgent || runPlantIdentificationAgent;
+  const analyzeWeather = deps.weatherIntelligenceAgent || runWeatherIntelligenceAgent;
 
   if (taskType === AI_TASKS.CROP_VALIDATION) {
     if (!imageBuffer || !mimeType) {
@@ -117,6 +120,10 @@ export const orchestrateAIWorkflow = async (taskType, payload, deps = {}) => {
       runSingleImageAnalysis: (singlePayload) =>
         orchestrateAIWorkflow(AI_TASKS.DISEASE_DETECTION, singlePayload, deps),
     });
+  }
+
+  if (taskType === AI_TASKS.WEATHER_INTELLIGENCE) {
+    return analyzeWeather(payload);
   }
 
   throw new AppError(

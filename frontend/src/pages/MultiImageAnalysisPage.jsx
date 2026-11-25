@@ -243,6 +243,15 @@ const MultiImageAnalysisPage = () => {
             </div>
           )}
 
+          {batchResult?.items?.some((item) => item.imageStorageError) && (
+            <div className="kv-alert kv-alert-warning" role="alert">
+              <FiAlertTriangle size={17} style={{ flexShrink: 0, marginTop: 2 }} />
+              <span>
+                One or more batch images could not be stored in Cloudinary. Analysis results were saved without fabricating image URLs.
+              </span>
+            </div>
+          )}
+
           <section className="kv-grid-4" aria-label="Batch Overview Statistics">
             <StatCard
               label="Total Uploaded"

@@ -58,6 +58,25 @@ const diseaseAnalysisSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    imageStorageStatus: {
+      type: String,
+      enum: ['STORED', 'NOT_CONFIGURED', 'UPLOAD_FAILED', null],
+      default: null,
+    },
+    imageStorageError: {
+      type: String,
+      default: null,
+    },
+    imageMetadata: {
+      mimeType: {
+        type: String,
+        default: null,
+      },
+      sizeBytes: {
+        type: Number,
+        default: null,
+      },
+    },
   },
   {
     timestamps: true,
@@ -65,6 +84,8 @@ const diseaseAnalysisSchema = new mongoose.Schema(
 );
 
 diseaseAnalysisSchema.index({ user: 1, createdAt: -1 });
+diseaseAnalysisSchema.index({ user: 1, crop: 1, createdAt: -1 });
+diseaseAnalysisSchema.index({ user: 1, status: 1, createdAt: -1 });
 
 const DiseaseAnalysis = mongoose.model('DiseaseAnalysis', diseaseAnalysisSchema);
 
