@@ -1,0 +1,13 @@
+{
+  "name": "kisanvision-ai",
+  "version": "1.0.0",
+  "private": true,
+  "description": "KisanVision AI - Agentic AI Agricultural Intelligence Platform",
+  "scripts": {
+    "install:all": "npm --prefix server install && npm --prefix frontend install",
+    "dev:server": "npm --prefix server run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "start:server": "npm --prefix server start",
+    "build:frontend": "npm --prefix frontend run build"
+  }
+}

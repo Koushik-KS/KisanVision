@@ -1,0 +1,69 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--kv-font-sans);
+  background-color: var(--kv-bg);
+  color: var(--kv-text);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0;
+  font-family: var(--kv-font-heading);
+  color: var(--kv-text);
+  letter-spacing: -0.015em;
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+/* Focus visibility for accessibility */
+:focus-visible {
+  outline: 2px solid var(--kv-primary);
+  outline-offset: 2px;
+}
+
+@keyframes kv-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.kv-spin {
+  animation: kv-spin 0.9s linear infinite;
+}
